@@ -2,234 +2,174 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <math.h>
-#include <stdbool.h>
 #include "input_error.h"
 
 #define GROUP_SIZE 5
-#define max(x,y) (((x) >= (y)) ? (x) : (y))
-#define min(x,y) (((x) <= (y)) ? (x) : (y))
 
-typedef struct smart_array_struct{
-    int *data;
-    int len;
-} *SmartArray;
-
-void smartInsertionSort(SmartArray A, int l, int h){
-    if(h > A->len || l >= h || l < 0){
-        fprintf(stderr, "ERROR: INVALID ENTRIES TO FUNCTION smartInsertionSort");
-        return;
-    }
-
-    int i, j;
-    int key;
-
+void insertionSort(int *A, int l, int h){
+    // assume that l < h, l > 0, h < A.len
+    int i, j, key;
     for(i = l+1; i < h; i++){
-        key = A->data[i];
+        key = A[i];
         j = i - 1;
-        while(j >= l && A->data[j] > key){
-            A->data[j+1] = A->data[j];
-            j = j - 1;
+        while(j >= l && A[j] > key){
+            A[j+1] = A[j];
+            j--;
         }
-        A->data[j+1] = key;
+        A[j+1] = key;
     }
 }
 
-SmartArray createSmartArray(){
-    SmartArray newArray = malloc(sizeof(struct smart_array_struct));
-    if(newArray){
-        newArray->len = 0;
-        newArray->data = NULL;
-    }
-    return newArray;
-}
-
-void printSmartArray(SmartArray A, char* arr_name){
-    printf("Smart Array %s: [ ", arr_name);
-    for(int i = 0; i < A->len - 1; i++){
-        printf("%d, ", A->data[i]);
-    }
-    printf("%d]\n", A->data[A->len-1]);
-}
-
-bool mallocSmartArrayData(SmartArray A){
-    A->data = malloc(A->len * sizeof(int));
-    return A->data != NULL;
-}
-
-void freeSmartArray(SmartArray A){
-    if(A->data == NULL){
-        free(A->data);
-        A->data = NULL;
-    }
-    free(A);
-    A = NULL;
-}
-
-void smartMerge(SmartArray A, int l, int m, int r){
+void merge(int *A, int l, int m, int r){
     int i, j, k;
+    int nl = m - l + 1;
+    int nr = r - m;
 
-    SmartArray L = createSmartArray();
-    SmartArray R = createSmartArray();
+    int L[nl], R[nr];
 
-    L->len = m - l + 1;
-    R->len = r - m;
+    for(i = 0; i < nl; i++){
+        L[i] = A[l+i];
+    }
+    for(j = 0; j < nr; j++){
+        R[j] = A[m + 1 + j];
+    }
 
-    mallocSmartArrayData(L);
-    mallocSmartArrayData(R);
+    i = 0, j = 0, k = l;
 
-
-    for(i = 0; i < L->len; i++)
-        L->data[i] = A->data[l + i];
-    for(i = 0; i < R->len; i++)
-        R->data[i] = A->data[m + 1 + i];
-
-    i = 0;
-    j = 0;
-    k = l;
-
-    while(i < L->len && j < R->len){
-        A->data[k] = min(L->data[i], R->data[j]);
-        if(L->data[i] <= R->data[j]){
+    while(i < nl && j < nr){
+        if(L[i] <= R[j]){
+            A[k] = L[i];
             i++;
         } else {
+            A[k] = R[j];
             j++;
         }
         k++;
     }
 
-    while(i < L->len){
-        A->data[k] = L->data[i];
+    while(i < nl){
+        A[k] = L[i];
         i++;
         k++;
     }
 
-    while(j < R->len){
-        A->data[k] = R->data[j];
+    while(j < nr){
+        A[k] = R[j];
         j++;
         k++;
     }
 }
 
-void smartMergeSort(SmartArray A, int l, int r){
+void mergeSort(int *A, int l, int r){
     if(l < r) {
         int m = l + (r-l) / 2;
-        smartMergeSort(A, l, m);
-        smartMergeSort(A, m+1, r);
+        mergeSort(A, l, m);
+        mergeSort(A, m+1, r);
 
-        smartMerge(A, l, m, r);
+        merge(A, l, m, r);
     }
 }
 
-void partitionThreeWays(SmartArray A, SmartArray L, SmartArray M, SmartArray R, int p){
-    int l, m, r;
-
-    for(int i = 0; i < A->len; i++){
-        if(A->data[i] < p){
-            L->len++;
-        }
-        if(A->data[i] > p){
-            R->len++;
-        }
-        if(A->data[i] == p){
-            M->len++;
-        }
+void partitionThreeWays(const int* A, int n, int* L, int *l, int* M, int *m, int* R, int *r, int p){
+    int i;
+    for(i=0; i<n; i++){
+        if(A[i] < p)
+            (*l)++;
+        if(A[i] > p)
+            (*r)++;
+        if(A[i] == p)
+            (*m)++;
     }
 
-    mallocSmartArrayData(L);
-    mallocSmartArrayData(M);
-    mallocSmartArrayData(R);
 
-    l = m = r = 0;
+    L = malloc((*l) * sizeof(int));
+    M = malloc((*m) * sizeof(int));
+    R = malloc((*r) * sizeof(int));
 
-    for(int i = 0; i < A->len; i++){
-        if(A->data[i] < p){
-            L->data[l] = A->data[i];
-            l++;
+    (*l) = 0, (*m) = 0, (*r) = 0;
+
+    for(i=0; i<n; i++){
+        if(A[i] < p){
+            L[(*l)] = A[i];
+            (*l)++;
         }
-        if(A->data[i] > p){
-            R->data[r] = A->data[i];
-            r++;
+        if(A[i] > p){
+            M[(*m)] = A[i];
+            (*m)++;
         }
-        if(A->data[i] == p){
-            M->data[m] = A->data[i];
-            m++;
+        if(A[i] == p) {
+            R[(*r)] = A[i];
+            (*r)++;
         }
     }
 }
 
-int MoM_Select(SmartArray A, int k){
-    int i, n_groups = floor(A->len / GROUP_SIZE);
+int medianOfMedianSelect(int *A, int n, int k){
+    int i, n_groups;
 
-    if(A->len < 50){
-        smartMergeSort(A, 0, A->len);
-        return A->data[k];
+    n_groups = floor((double)n / GROUP_SIZE);
+
+    if(n < 50){
+        mergeSort(A, 0, n-1);
+        return A[k];
     }
 
-    SmartArray B = createSmartArray();
-    B->len = n_groups;
-    mallocSmartArrayData(B);
+    int *B = malloc(n_groups * sizeof(int));
 
-    for(i = 0; i < n_groups; i++) {
-        smartInsertionSort(A, i * GROUP_SIZE, (i + 1) * GROUP_SIZE);
-        B->data[i] = A->data[i * GROUP_SIZE + 2];
+    for(i = 0; i < n_groups; i++){
+        insertionSort(A, i*GROUP_SIZE, (i+1) * GROUP_SIZE);
+        B[i] = A[i * GROUP_SIZE + 2];
     }
 
-    int p = MoM_Select(B, floor(A->len / 10));
+    int p = medianOfMedianSelect(B, n_groups, floor((double)n / 10));
 
-    freeSmartArray(B);
+    free(B);
 
-    SmartArray L, M, R;
-    L = createSmartArray();
-    M = createSmartArray();
-    R = createSmartArray();
-    partitionThreeWays(A, L, M, R, p);
+    int *L, *M, *R, l, m, r;
 
-    if( k <= L->len){
-        return MoM_Select(L, k);
+    partitionThreeWays(A, n, L, &l, M, &m, R, &r, p);
+
+    if( k <= l){
+        return medianOfMedianSelect(L, l, k);
     } else {
-        if(k > L->len + M->len){
-            return MoM_Select(R, k - L->len - M->len);
+        if(k > l + m){
+            return medianOfMedianSelect(R, r, k - l - m);
         } else {
             return p;
         }
     }
 }
 
-
 // read a file to an array
-SmartArray readFile(char *filename) {
+int readFile(char *filename, int **A) {
 
     // declare variables
-    int i, length, current_position;
+    int i, length, current_position, n;
     int c;
-    char *line;
+    char *line = NULL;
     size_t len;
     ssize_t read;
     FILE *fp;
-    SmartArray A;
 
     // initialize variables
     current_position = 0;
     line = NULL;
     len = 0;
-    A = createSmartArray();
 
     // open the file
     fp = fopen(filename, "r");
 
     // check that the file was successfully opened, if not free 'A' and exit
     if (fp == NULL){
-        freeSmartArray(A);
         exit(INPUT_FILE_FAILED_TO_OPEN);
     }
 
     // initialize length of 'A' to 0
-    A->len = 0;
+    n = 0;
 
     // check that file is not empty by checking the first character, if so free 'A' and exit
     c = fgetc(fp);
     if(c == EOF){
-        freeSmartArray(A);
         exit(PARSING_ERROR_EMPTY_FILE);
     } else {
         ungetc(c, fp);
@@ -248,27 +188,24 @@ SmartArray readFile(char *filename) {
         // check that each character in 'line' is a digit, if not free 'A' and exit
         for(i = 0; i < length; i++){
             if(!isdigit(line[i])){
-                freeSmartArray(A);
-                printf("invalid character encountered\n");
                 exit(PARSING_ERROR_INVALID_CHARACTER_ENCOUNTERED);
             }
         }
 
         // increase the size of the array if 'line' != "\n"
         if(length != 0){
-            A->len++;
+            n++;
         }
     }
 
     //TODO: prolly should remove this
     // Check that the array isn't empty. If so, the file was empty, free 'A' and exit.
-    if(A->len == 0){
-        freeSmartArray(A);
+    if(n == 0){
         exit(PARSING_ERROR_EMPTY_FILE);
     }
 
     // allocate memory for the data of
-    mallocSmartArrayData(A);
+    (*A) = malloc(n * sizeof(int));
 
     // rewind the file pointer to the beginning of the file
     rewind(fp);
@@ -281,35 +218,40 @@ SmartArray readFile(char *filename) {
     while ((read = getline(&line, &len, fp)) != -1) {
         length = (feof(fp) ? read : read - 1);
         if(length != 0){
-            A->data[current_position] = strtol(line, NULL, 10);
+            (*A)[current_position] = strtol(line, NULL, 10);
             current_position++;
         }
     }
 
+    free(line);
+
     //  close the file and check that the file was closed properly
     if(fclose(fp) != 0){
-        freeSmartArray(A);
+        free((*A));
         exit(INPUT_FILE_FAILED_TO_CLOSE);
     }
 
-    return A;
+    return n;
 }
 
 int main(int argc, char **argv) {
+//    testMergeSort();
     char *filename;
-    SmartArray A;
-    int x = 10;
+    int *A, n, x;
+
+    x = 6;
 
     if(argc != 2) {
-        fprintf(stderr, "ERROR: INCORRECT NUMBER OF COMMAND LINE ARGUMENTS\n");
         exit(INCORRECT_NUMBER_OF_COMMAND_LINE_ARGUMENTS);
     }
 
     filename = argv[1];
 
-    A = readFile(filename);
+    n = readFile(filename, &A);
 
-    printf("%d", MoM_Select(A, x));
+    printf("%d", medianOfMedianSelect(A, n, x));
+
+    free(A);
 
     return 0;
 }
